@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { OAth2Client } = require('google-auth-library');
 
 function generateAccessToken(user){
 
@@ -29,4 +30,31 @@ function verifyAccessToken(token){
   }
 }
 
-module.exports = { generateAccessToken, verifyAccessToken }
+async function googleAuth(code) {
+  console.log("Google login");
+  const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+  const REDIRECT_URI = process.env.REDIRECT_URI;
+
+  const oath2Client = new OAth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+
+  try {
+    // Exchange code for tokens
+    const { tokens } = await oath2Client.getToken(code)
+    oath2Client.setCredentials(tokens)
+
+    const ticket = await oath2Client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: CLIENT_ID
+    });
+
+    const userInfo = await ticket.getPayload();
+    console.log("Google User", userInfo);
+    return {user: userInfo, tokens}
+  } catch (error) {
+    console.log("Error in google authentication", error);
+    return { error: "Failed to authenticate with google"}
+  }
+}
+
+module.exports = { generateAccessToken, verifyAccessToken, googleAuth }
