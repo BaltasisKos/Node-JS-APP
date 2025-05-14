@@ -43,8 +43,11 @@ exports.create = async(req, res) => {
   console.log("Create User");
   let data = req.body;
   const SaltOrRounds = 10;
-  const hashedPassword = await bcrypt.hash(data.password, SaltOrRounds)
   
+  let hashedPassword = "";
+  if (data.password)
+    hashedPassword = await bcrypt.hash(data.password, SaltOrRounds)
+   
   const newUser = new User({
     username: data.username,
     password: hashedPassword,
@@ -118,3 +121,23 @@ exports.deleteByEmail = async(req, res) => {
   }
 } 
 // http://localhost:3000/api/users/test/email/lakis@aueb.gr
+
+
+exports.checkDuplicateEmail = async(req, res) => {
+  const email = req.params.email;
+
+  console.log("Check for duplicate email address", email);
+  try {
+    const result = await User.findOne({ email: email });
+    if (result) {
+      console.log("Exists")
+      res.status(400).json({ status: false, data: result });
+    } else {
+      console.log("Not Exists")
+      res.status(200).json({ status: true, data: result });
+    }
+  } catch (err) {
+    res.status(400).json({ status: false, data: err });
+    console.error(`Problem in finding email address: ${email}`, err);
+  }
+}
